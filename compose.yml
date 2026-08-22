@@ -1,0 +1,44 @@
+services:
+  vxlan-bootstrap:
+    build:
+      context: .
+      dockerfile: Dockerfile
+
+    image: local/ugreen-dxp-vxlan:1.0
+    container_name: vxlan-bootstrap
+    restart: unless-stopped
+
+    # The process must operate in the DXP host network namespace so Linux
+    # bridges and VXLAN interfaces are created on the host, not inside an
+    # isolated container namespace.
+    network_mode: host
+
+    # NET_ADMIN is sufficient for bridge/VXLAN link management. Full
+    # privileged mode is intentionally avoided.
+    cap_add:
+      - NET_ADMIN
+
+    environment:
+      CONFIG: /config/config.json
+      TZ: Europe/Warsaw
+
+    volumes:
+      # Declarative VXLAN/bridge/macvlan configuration.
+      - ./config.json:/config/config.json:ro
+
+      # Required only because the bootstrap container creates, validates,
+      # and removes Docker macvlan networks. Access to docker.sock is
+      # effectively root-equivalent access to the Docker daemon.
+      - /var/run/docker.sock:/var/run/docker.sock
+
+    healthcheck:
+      test:
+        - CMD
+        - /entrypoint.sh
+        - healthcheck
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+    stop_grace_period: 5s
