@@ -66,8 +66,13 @@ The operation is idempotent: starting it again validates existing resources and 
 ├── config.json
 ├── Dockerfile
 ├── entrypoint.sh
+├── mikrotik.md
 └── README.md
 ```
+
+## Remote VTEP examples
+
+- [MikroTik RouterOS v7 VXLAN configuration](mikrotik.md) — central VTEP example with multiple VNIs, VLAN mapping, routing, firewall, MTU, verification, and troubleshooting.
 
 ## Requirements
 
@@ -507,7 +512,7 @@ This repository configures only the DXP side. The central router/VTEP must provi
 - MTU;
 - forwarding policy/firewall rules.
 
-The exact configuration depends on the remote platform (for example MikroTik RouterOS, VyOS, Linux, or a hardware switch/router).
+The exact configuration depends on the remote platform. For MikroTik RouterOS, see [mikrotik.md](mikrotik.md).
 
 ## License
 
