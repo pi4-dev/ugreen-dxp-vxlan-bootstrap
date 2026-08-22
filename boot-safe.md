@@ -34,7 +34,12 @@ ugreen-vxlan-host-bootstrap.service
         +--> VXLAN interfaces
         |
         v
-docker.service
+docker.service ExecStartPre
+        |
+        +--> idempotent bridge/VXLAN re-check
+        |
+        v
+dockerd
         |
         +--> Docker restores persistent macvlan networks
         +--> Docker restarts existing workload containers
@@ -119,15 +124,22 @@ The installer does **not** restart Docker, so existing application containers ar
 
 The generated host service is a `oneshot` unit ordered after `network-online.target` and before `docker.service`.
 
-The Docker drop-in adds:
+It also uses `RequiresMountsFor=` so the persistent project directory is mounted before the pre-Docker script is executed. Missing generated configuration is treated as a hard failure with `AssertPathExists=` rather than as an optional condition.
+
+The Docker drop-in contains both a hard dependency and a per-start preflight:
 
 ```ini
 [Unit]
 Requires=ugreen-vxlan-host-bootstrap.service
 After=ugreen-vxlan-host-bootstrap.service
+
+[Service]
+ExecStartPre=/bin/bash /volumeX/.../host-bootstrap.sh apply /volumeX/.../.host-bootstrap/host-config.tsv
 ```
 
-This is the important part: a future start of `docker.service` cannot proceed successfully unless the host VXLAN bootstrap has completed successfully.
+This is deliberate. `Requires=` guarantees the boot dependency, while `ExecStartPre=` re-applies and validates the bridge/VXLAN state on **every** start of `docker.service`, including a Docker restart later in the same system boot.
+
+If that preflight fails, `dockerd` is not started.
 
 ## Status
 
@@ -150,6 +162,7 @@ Useful manual checks:
 ```bash
 systemctl status ugreen-vxlan-host-bootstrap.service
 systemctl show docker.service -p Requires -p After
+systemctl cat docker.service
 journalctl -u ugreen-vxlan-host-bootstrap.service -b
 ip -d link show type vxlan
 bridge link
@@ -173,6 +186,8 @@ sudo ./install.sh sync
 ```
 
 `sync` performs config validation, regenerates the host snapshot, reapplies the host networking and reconciles the Docker bootstrap container.
+
+Always run `sync` after editing `config.json`; the generated `.host-bootstrap/host-config.tsv` is intentionally not edited by hand.
 
 ### Immutable VXLAN changes
 
@@ -259,15 +274,16 @@ No change to `config.json` is required.
 
 ## Failure behavior
 
-Boot-safe mode intentionally uses `Requires=` rather than only `Wants=`.
+Boot-safe mode intentionally uses a hard dependency and a Docker `ExecStartPre` check.
 
-If bridge/VXLAN creation fails, Docker is prevented from starting through this dependency. This is deliberate: starting Docker workloads while their L2 parent interfaces are missing would recreate the original race condition and could leave applications in a partially connected state.
+If bridge/VXLAN creation or validation fails, Docker is prevented from starting. This is deliberate: starting Docker workloads while their L2 parent interfaces are missing would recreate the original race condition and could leave applications in a partially connected state.
 
 Troubleshoot with:
 
 ```bash
 systemctl status ugreen-vxlan-host-bootstrap.service
 journalctl -u ugreen-vxlan-host-bootstrap.service -b
+systemctl status docker.service
 ```
 
 After correcting the configuration or underlay problem:
