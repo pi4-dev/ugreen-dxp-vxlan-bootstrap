@@ -1,0 +1,69 @@
+{
+  "global": {
+    "underlay_interface": "eth0",
+    "local_vtep": "10.10.20.10",
+    "remote_vtep": "10.10.10.1",
+    "udp_port": 4789,
+    "mtu": 1450
+  },
+  "bridges": [
+    {
+      "name": "br30",
+      "mtu": 1450,
+      "multicast_snooping": false,
+      "stp": false
+    },
+    {
+      "name": "br40",
+      "mtu": 1450,
+      "multicast_snooping": false,
+      "stp": false
+    },
+    {
+      "name": "br50",
+      "mtu": 1450,
+      "multicast_snooping": false,
+      "stp": false
+    }
+  ],
+  "tunnels": [
+    {
+      "name": "vx30",
+      "vni": 30,
+      "bridge": "br30"
+    },
+    {
+      "name": "vx40",
+      "vni": 40,
+      "bridge": "br40"
+    },
+    {
+      "name": "vx50",
+      "vni": 50,
+      "bridge": "br50"
+    }
+  ],
+  "docker_networks": [
+    {
+      "name": "vxlan-ha",
+      "parent": "br30",
+      "subnet": "192.168.30.0/24",
+      "gateway": "192.168.30.1",
+      "ip_range": "192.168.30.192/27"
+    },
+    {
+      "name": "vxlan-iot",
+      "parent": "br40",
+      "subnet": "192.168.40.0/24",
+      "gateway": "192.168.40.1",
+      "ip_range": "192.168.40.192/27"
+    },
+    {
+      "name": "vxlan-audio",
+      "parent": "br50",
+      "subnet": "192.168.50.0/24",
+      "gateway": "192.168.50.1",
+      "ip_range": "192.168.50.192/27"
+    }
+  ]
+}
