@@ -112,7 +112,9 @@ Documentation=https://github.com/pi4-dev/ugreen-dxp-vxlan-bootstrap
 Wants=network-online.target
 After=network-online.target
 Before=docker.service
-ConditionPathExists=$GENERATED_CONFIG
+RequiresMountsFor=$SCRIPT_DIR
+AssertPathExists=$SCRIPT_DIR/host-bootstrap.sh
+AssertPathExists=$GENERATED_CONFIG
 
 [Service]
 Type=oneshot
@@ -131,6 +133,9 @@ EOF_UNIT
 [Unit]
 Requires=$UNIT_NAME
 After=$UNIT_NAME
+
+[Service]
+ExecStartPre=/bin/bash $SCRIPT_DIR/host-bootstrap.sh apply $GENERATED_CONFIG
 EOF_DROPIN
     chmod 0644 "$DOCKER_DROPIN"
 
